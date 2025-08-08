@@ -1,66 +1,12 @@
-## Foundry
+# Proxy Base
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+A Basic implementation of ERC1967 Proxy with no public functions.
 
-Foundry consists of:
+The contract has 5 reserved selectors:
+ - 0x00000001 - changes the admin of the proxy.
+ - 0x00000002 - upgrades the proxy implementation with custom data call.
+ - 0x00000003 - returns the proxy admin address.
+ - 0x00000004 - returns the implementation address.
+ - 0x00000000 - can be called by the admin, but does nothing.
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-## Documentation
-
-https://book.getfoundry.sh/
-
-## Usage
-
-### Build
-
-```shell
-$ forge build
-```
-
-### Test
-
-```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+ First 2 selectors can be called only by the proxy admin. Examples of calls can be found here.
