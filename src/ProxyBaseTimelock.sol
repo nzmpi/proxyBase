@@ -208,6 +208,8 @@ contract ProxyBaseTimelock is ERC1967Proxy {
         NewImplementation memory newImplementation = _getNewImplementationStruct();
         assembly ("memory-safe") {
             let length := add(0x80, mload(add(newImplementation, 0x60)))
+            // update newImplementation.data offset
+            mstore(add(newImplementation, 0x40), 0x60)
             return(newImplementation, length)
         }
     }
