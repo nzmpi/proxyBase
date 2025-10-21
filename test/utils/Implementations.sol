@@ -22,3 +22,15 @@ contract Implementation2 is Implementation {
         return !flag;
     }
 }
+
+contract Implementation3 is Implementation2 {
+    bytes data;
+
+    function initialize(bytes calldata initData) external {
+        data = initData;
+    }
+
+    function getData() external view returns (bytes memory) {
+        return data;
+    }
+}
