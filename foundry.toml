@@ -6,4 +6,7 @@ libs = ["lib"]
 [fmt]
 sort_imports = true
 
+[lint]
+lint_on_build = false
+
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
