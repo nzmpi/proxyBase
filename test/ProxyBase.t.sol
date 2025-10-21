@@ -6,6 +6,11 @@ import "./utils/Implementations.sol";
 import {Test, console} from "forge-std/Test.sol";
 
 contract ProxyBaseTest is Test {
+    bytes4 constant CHANGE_ADMIN_SELECTOR = 0;
+    bytes4 constant CHANGE_IMPLEMENTATION_SELECTOR = 0x00000001;
+    bytes constant GET_ADMIN_SELECTOR = hex"00000002";
+    bytes constant GET_IMPLEMENTATION_SELECTOR = hex"00000003";
+
     Implementation implementation;
     Implementation proxy;
 
@@ -39,22 +44,22 @@ contract ProxyBaseTest is Test {
     }
 
     function test_getAndChangeProxyAdmin() public {
-        (bool s, bytes memory returnData) = address(proxy).call(hex"00000002");
+        (bool s, bytes memory returnData) = address(proxy).call(GET_ADMIN_SELECTOR);
         assertTrue(s, "Bad getAdmin call 1");
         address admin = abi.decode(returnData, (address));
         assertEq(admin, address(this), "Wrong old proxy admin");
 
-        bytes memory data = bytes.concat(hex"00000000", abi.encode(vm.addr(1)));
+        bytes memory data = bytes.concat(CHANGE_ADMIN_SELECTOR, abi.encode(vm.addr(1)));
         (s, returnData) = address(proxy).call(data);
         assertTrue(s, "Bad changeAdmin call 1");
         assertEq(returnData.length, 0, "Wrong returnData length");
 
-        (s, returnData) = address(proxy).call(hex"00000002");
+        (s, returnData) = address(proxy).call(GET_ADMIN_SELECTOR);
         assertTrue(s, "Bad getAdmin call 2");
         admin = abi.decode(returnData, (address));
         assertEq(admin, vm.addr(1), "Wrong new proxy admin 1");
 
-        data = bytes.concat(hex"00000000", abi.encode(vm.addr(2)));
+        data = bytes.concat(CHANGE_ADMIN_SELECTOR, abi.encode(vm.addr(2)));
         (s, returnData) = address(proxy).call(data);
         assertFalse(s, "Bad changeAdmin call 2");
         assertEq(
@@ -62,19 +67,19 @@ contract ProxyBaseTest is Test {
         );
 
         vm.prank(vm.addr(1));
-        data = bytes.concat(hex"00000000", abi.encode(vm.addr(2)));
+        data = bytes.concat(CHANGE_ADMIN_SELECTOR, abi.encode(vm.addr(2)));
         (s, returnData) = address(proxy).call(data);
         assertTrue(s, "Bad changeAdmin call 3");
         assertEq(returnData.length, 0, "Wrong returnData length");
 
-        (s, returnData) = address(proxy).call(hex"00000002");
+        (s, returnData) = address(proxy).call(GET_ADMIN_SELECTOR);
         assertTrue(s, "Bad getAdmin call 3");
         admin = abi.decode(returnData, (address));
         assertEq(admin, vm.addr(2), "Wrong new proxy admin 2");
     }
 
     function test_getAndChangeImplementation() public {
-        (bool s, bytes memory returnData) = address(proxy).call(hex"00000003");
+        (bool s, bytes memory returnData) = address(proxy).call(GET_IMPLEMENTATION_SELECTOR);
         assertTrue(s, "Bad getImplementation call 1");
         address impl = abi.decode(returnData, (address));
         assertEq(impl, address(implementation), "Wrong old implementation");
@@ -83,13 +88,15 @@ contract ProxyBaseTest is Test {
         Implementation2(address(proxy)).getReverseFlag();
 
         address newImplementation = address(new Implementation2());
-        bytes memory data =
-            bytes.concat(hex"00000001", abi.encode(newImplementation, abi.encodeCall(Implementation2.initialize, true)));
+        bytes memory data = bytes.concat(
+            CHANGE_IMPLEMENTATION_SELECTOR,
+            abi.encode(newImplementation, abi.encodeCall(Implementation2.initialize, true))
+        );
         (s, returnData) = address(proxy).call(data);
         assertTrue(s, "Bad changeImplementation call");
         assertEq(returnData.length, 0, "Wrong returnData length");
 
-        (s, returnData) = address(proxy).call(hex"00000003");
+        (s, returnData) = address(proxy).call(GET_IMPLEMENTATION_SELECTOR);
         assertTrue(s, "Bad getImplementation call 2");
         impl = abi.decode(returnData, (address));
         assertEq(impl, newImplementation, "Wrong new implementation");

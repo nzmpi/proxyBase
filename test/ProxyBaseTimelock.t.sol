@@ -7,6 +7,15 @@ import {Test, console2} from "forge-std/Test.sol";
 
 contract ProxyBaseTimelockTest is Test {
     uint256 constant TIMELOCK = 24 hours;
+    bytes4 constant SCHEDULE_NEW_ADMIN_SELECTOR = 0;
+    bytes constant CHANGE_ADMIN_SELECTOR = hex"00000001";
+    bytes4 constant SCHEDULE_NEW_IMPLEMENTATION_SELECTOR = 0x00000002;
+    bytes constant CHANGE_IMPLEMENTATION_SELECTOR = hex"00000003";
+    bytes constant GET_ADMIN_SELECTOR = hex"00000004";
+    bytes constant GET_SCHEDULED_ADMIN_SELECTOR = hex"00000005";
+    bytes constant GET_IMPLEMENTATION_SELECTOR = hex"00000006";
+    bytes constant GET_SCHEDULED_IMPLEMENTATION_SELECTOR = hex"00000007";
+
     Implementation implementation;
     Implementation proxy;
     uint256 expectedTime;
@@ -31,7 +40,7 @@ contract ProxyBaseTimelockTest is Test {
 
     function test_fuzz_calls(bytes4 selector) public {
         vm.assume(
-            selector > hex"00000007" && selector != Implementation.toggle.selector
+            selector > 0x00000007 && selector != Implementation.toggle.selector
                 && selector != Implementation.getFlag.selector
         );
 
@@ -41,7 +50,7 @@ contract ProxyBaseTimelockTest is Test {
     }
 
     function test_getAndScheduleNewAdmin() public {
-        (bool s, bytes memory returnData) = address(proxy).call(hex"00000005");
+        (bool s, bytes memory returnData) = address(proxy).call(GET_SCHEDULED_ADMIN_SELECTOR);
         assertTrue(s, "Bad getScheduledAdmin call 1");
         ProxyBaseTimelock.NewAdmin memory newAdmin = abi.decode(returnData, (ProxyBaseTimelock.NewAdmin));
         assertEq(newAdmin.admin, address(0), "Wrong scheduled admin 1");
@@ -50,19 +59,19 @@ contract ProxyBaseTimelockTest is Test {
         expectedTime = vm.getBlockTimestamp() + TIMELOCK;
         vm.expectEmit(true, false, false, true);
         emit ProxyBaseTimelock.NewAdminScheduled(vm.addr(1), expectedTime);
-        bytes memory data = bytes.concat(hex"00000000", abi.encode(vm.addr(1)));
+        bytes memory data = bytes.concat(SCHEDULE_NEW_ADMIN_SELECTOR, abi.encode(vm.addr(1)));
         (s, returnData) = address(proxy).call(data);
         assertTrue(s, "Bad scheduleNewAdmin call 1");
         assertEq(returnData.length, 0, "Wrong returnData length");
 
-        (s, returnData) = address(proxy).call(hex"00000005");
+        (s, returnData) = address(proxy).call(GET_SCHEDULED_ADMIN_SELECTOR);
         assertTrue(s, "Bad getScheduledAdmin call 2");
         newAdmin = abi.decode(returnData, (ProxyBaseTimelock.NewAdmin));
         assertEq(newAdmin.admin, vm.addr(1), "Wrong scheduled admin 2");
         assertEq(newAdmin.time, expectedTime, "Wrong scheduled time 2");
 
         vm.startPrank(vm.addr(1));
-        data = bytes.concat(hex"00000000", abi.encode(vm.addr(2)));
+        data = bytes.concat(SCHEDULE_NEW_ADMIN_SELECTOR, abi.encode(vm.addr(2)));
         (s, returnData) = address(proxy).call(data);
         assertFalse(s, "Bad scheduleNewAdmin call 2");
         assertEq(
@@ -71,28 +80,25 @@ contract ProxyBaseTimelockTest is Test {
     }
 
     function test_getAndChangeAdmin() public {
-        (bool s, bytes memory returnData) = address(proxy).call(hex"00000004");
+        (bool s, bytes memory returnData) = address(proxy).call(GET_ADMIN_SELECTOR);
         assertTrue(s, "Bad getAdmin call 1");
         address proxyAdmin = abi.decode(returnData, (address));
         assertEq(proxyAdmin, address(this), "Wrong proxyAdmin 1");
 
-        bytes memory data = hex"00000001";
-        (s, returnData) = address(proxy).call(data);
+        (s, returnData) = address(proxy).call(CHANGE_ADMIN_SELECTOR);
         assertFalse(s, "Bad changeAdmin call 1");
         assertEq(returnData, abi.encodeWithSelector(ProxyBaseTimelock.NoAdminScheduled.selector), "Wrong returnData 1");
 
         expectedTime = vm.getBlockTimestamp() + TIMELOCK;
-        data = bytes.concat(hex"00000000", abi.encode(vm.addr(1)));
+        bytes memory data = bytes.concat(SCHEDULE_NEW_ADMIN_SELECTOR, abi.encode(vm.addr(1)));
         (s, returnData) = address(proxy).call(data);
 
-        data = hex"00000004";
-        (s, returnData) = address(proxy).call(data);
+        (s, returnData) = address(proxy).call(GET_ADMIN_SELECTOR);
         assertTrue(s, "Bad getAdmin call 2");
         proxyAdmin = abi.decode(returnData, (address));
         assertEq(proxyAdmin, address(this), "Wrong proxyAdmin 2");
 
-        data = hex"00000001";
-        (s, returnData) = address(proxy).call(data);
+        (s, returnData) = address(proxy).call(CHANGE_ADMIN_SELECTOR);
         assertFalse(s, "Bad changeAdmin call 2");
         assertEq(
             returnData,
@@ -102,8 +108,7 @@ contract ProxyBaseTimelockTest is Test {
 
         vm.warp(expectedTime + 1);
         vm.startPrank(vm.addr(1));
-        data = hex"00000001";
-        (s, returnData) = address(proxy).call(data);
+        (s, returnData) = address(proxy).call(CHANGE_ADMIN_SELECTOR);
         assertFalse(s, "Bad changeAdmin call 3");
         assertEq(
             returnData,
@@ -112,22 +117,22 @@ contract ProxyBaseTimelockTest is Test {
         );
         vm.stopPrank();
 
-        (s, returnData) = address(proxy).call(data);
+        (s, returnData) = address(proxy).call(CHANGE_ADMIN_SELECTOR);
         assertTrue(s, "Bad changeAdmin call 4");
         assertEq(returnData.length, 0, "Wrong returnData length");
 
-        (s, returnData) = address(proxy).call(hex"00000005");
+        (s, returnData) = address(proxy).call(GET_SCHEDULED_ADMIN_SELECTOR);
         assertTrue(s, "Bad getScheduledAdmin call 1");
         ProxyBaseTimelock.NewAdmin memory newAdmin = abi.decode(returnData, (ProxyBaseTimelock.NewAdmin));
         assertEq(newAdmin.admin, address(0), "Wrong scheduled admin 1");
         assertEq(newAdmin.time, type(uint256).max, "Wrong scheduled time 1");
 
-        (s, returnData) = address(proxy).call(hex"00000004");
+        (s, returnData) = address(proxy).call(GET_ADMIN_SELECTOR);
         assertTrue(s, "Bad getAdmin call 3");
         proxyAdmin = abi.decode(returnData, (address));
         assertEq(proxyAdmin, vm.addr(1), "Wrong proxyAdmin 3");
 
-        data = bytes.concat(hex"00000000", abi.encode(vm.addr(2)));
+        data = bytes.concat(SCHEDULE_NEW_ADMIN_SELECTOR, abi.encode(vm.addr(2)));
         (s, returnData) = address(proxy).call(data);
         assertFalse(s, "Bad scheduleNewAdmin call");
         assertEq(
@@ -138,12 +143,12 @@ contract ProxyBaseTimelockTest is Test {
 
         vm.startPrank(vm.addr(1));
         expectedTime = vm.getBlockTimestamp() + TIMELOCK;
-        data = bytes.concat(hex"00000000", abi.encode(vm.addr(2)));
+        data = bytes.concat(SCHEDULE_NEW_ADMIN_SELECTOR, abi.encode(vm.addr(2)));
         (s, returnData) = address(proxy).call(data);
         assertTrue(s, "Bad scheduleNewAdmin call");
         assertEq(returnData.length, 0, "Wrong returnData length");
 
-        (s, returnData) = address(proxy).call(hex"00000005");
+        (s, returnData) = address(proxy).call(GET_SCHEDULED_ADMIN_SELECTOR);
         assertTrue(s, "Bad getScheduledAdmin call 2");
         newAdmin = abi.decode(returnData, (ProxyBaseTimelock.NewAdmin));
         assertEq(newAdmin.admin, vm.addr(2), "Wrong scheduled admin 2");
@@ -152,7 +157,7 @@ contract ProxyBaseTimelockTest is Test {
     }
 
     function test_getAndScheduleNewImplementation() public {
-        (bool s, bytes memory returnData) = address(proxy).call(hex"00000007");
+        (bool s, bytes memory returnData) = address(proxy).call(GET_SCHEDULED_IMPLEMENTATION_SELECTOR);
         assertTrue(s, "Bad getScheduledImplementation call 1");
         ProxyBaseTimelock.NewImplementation memory newImplementation =
             abi.decode(returnData, (ProxyBaseTimelock.NewImplementation));
@@ -165,12 +170,13 @@ contract ProxyBaseTimelockTest is Test {
         expectedTime = vm.getBlockTimestamp() + TIMELOCK;
         vm.expectEmit(true, false, false, true);
         emit ProxyBaseTimelock.NewImplementationScheduled(address(implementation3), initData, expectedTime);
-        bytes memory data = bytes.concat(hex"00000002", abi.encode(address(implementation3), initData));
+        bytes memory data =
+            bytes.concat(SCHEDULE_NEW_IMPLEMENTATION_SELECTOR, abi.encode(address(implementation3), initData));
         (s, returnData) = address(proxy).call(data);
         assertTrue(s, "Bad scheduleNewImplementation call 1");
         assertEq(returnData.length, 0, "Wrong returnData length");
 
-        (s, returnData) = address(proxy).call(hex"00000007");
+        (s, returnData) = address(proxy).call(GET_SCHEDULED_IMPLEMENTATION_SELECTOR);
         assertTrue(s, "Bad getScheduledImplementation call 2");
         newImplementation = abi.decode(returnData, (ProxyBaseTimelock.NewImplementation));
         assertEq(newImplementation.implementation, address(implementation3), "Wrong scheduled implementation 2");
@@ -186,13 +192,12 @@ contract ProxyBaseTimelockTest is Test {
     }
 
     function test_getAndChangeImplementation() public {
-        (bool s, bytes memory returnData) = address(proxy).call(hex"00000006");
+        (bool s, bytes memory returnData) = address(proxy).call(GET_IMPLEMENTATION_SELECTOR);
         assertTrue(s, "Bad getImplementation call 1");
         address impl = abi.decode(returnData, (address));
         assertEq(impl, address(implementation), "Wrong implementation 1");
 
-        bytes memory data = hex"00000003";
-        (s, returnData) = address(proxy).call(data);
+        (s, returnData) = address(proxy).call(CHANGE_IMPLEMENTATION_SELECTOR);
         assertFalse(s, "Bad changeImplementation call 1");
         assertEq(
             returnData,
@@ -203,16 +208,16 @@ contract ProxyBaseTimelockTest is Test {
         Implementation3 implementation3 = new Implementation3();
         bytes memory initData = abi.encodeCall(Implementation3.initialize, ("some very long long long long long data"));
         expectedTime = vm.getBlockTimestamp() + TIMELOCK;
-        data = bytes.concat(hex"00000002", abi.encode(address(implementation3), initData));
+        bytes memory data =
+            bytes.concat(SCHEDULE_NEW_IMPLEMENTATION_SELECTOR, abi.encode(address(implementation3), initData));
         (s, returnData) = address(proxy).call(data);
 
-        (s, returnData) = address(proxy).call(hex"00000006");
+        (s, returnData) = address(proxy).call(GET_IMPLEMENTATION_SELECTOR);
         assertTrue(s, "Bad getImplementation call 2");
         impl = abi.decode(returnData, (address));
         assertEq(impl, address(implementation), "Wrong implementation 2");
 
-        data = hex"00000003";
-        (s, returnData) = address(proxy).call(data);
+        (s, returnData) = address(proxy).call(CHANGE_IMPLEMENTATION_SELECTOR);
         assertFalse(s, "Bad changeImplementation call 2");
         assertEq(
             returnData,
@@ -222,8 +227,7 @@ contract ProxyBaseTimelockTest is Test {
 
         vm.warp(expectedTime + 1);
         vm.startPrank(vm.addr(1));
-        data = hex"00000003";
-        (s, returnData) = address(proxy).call(data);
+        (s, returnData) = address(proxy).call(CHANGE_IMPLEMENTATION_SELECTOR);
         assertFalse(s, "Bad changeImplementation call 3");
         assertEq(
             returnData,
@@ -232,11 +236,11 @@ contract ProxyBaseTimelockTest is Test {
         );
         vm.stopPrank();
 
-        (s, returnData) = address(proxy).call(data);
+        (s, returnData) = address(proxy).call(CHANGE_IMPLEMENTATION_SELECTOR);
         assertTrue(s, "Bad changeImplementation call 4");
         assertEq(returnData.length, 0, "Wrong returnData length");
 
-        (s, returnData) = address(proxy).call(hex"00000007");
+        (s, returnData) = address(proxy).call(GET_SCHEDULED_IMPLEMENTATION_SELECTOR);
         assertTrue(s, "Bad getScheduledImplementation call 1");
         ProxyBaseTimelock.NewImplementation memory newImplementation =
             abi.decode(returnData, (ProxyBaseTimelock.NewImplementation));
@@ -244,7 +248,7 @@ contract ProxyBaseTimelockTest is Test {
         assertEq(newImplementation.time, type(uint256).max, "Wrong scheduled time");
         assertEq(newImplementation.data, "", "Wrong scheduled data");
 
-        (s, returnData) = address(proxy).call(hex"00000006");
+        (s, returnData) = address(proxy).call(GET_IMPLEMENTATION_SELECTOR);
         assertTrue(s, "Bad getImplementation call 3");
         impl = abi.decode(returnData, (address));
         assertEq(impl, address(implementation3), "Wrong implementation 3");

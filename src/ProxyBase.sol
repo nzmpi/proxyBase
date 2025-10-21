@@ -26,7 +26,7 @@ contract ProxyBase is ERC1967Proxy {
      * @dev Selectors 0x00000000 - 0x00000003 are reserved for proxy functions.
      * @dev Selectors 0x00000000 and 0x00000001 can only be called by the proxy admin.
      * @dev 0x00000000: changeAdmin(address newAdmin) - where new admin is abi encoded.
-     * @dev 0x00000001: upgradeToAndCall(address newImplementation, bytes data) -
+     * @dev 0x00000001: changeImplementation(address newImplementation, bytes data) -
      * where newImplementation and data are abi encoded.
      * @dev 0x00000002: getAdmin() - returns the proxy admin address.
      * @dev 0x00000003: getImplementation() - returns the implementation address.

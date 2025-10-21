@@ -68,32 +68,32 @@ contract ProxyBaseTimelock is ERC1967Proxy {
      * @dev Examples of calls can be found in test/ProxyBaseTimeLock.t.sol
      */
     fallback() external payable override {
-        if (bytes4(msg.data[0:4]) < bytes4(hex"00000008")) {
+        if (bytes4(msg.data[0:4]) < 0x00000008) {
             bytes4 selector = bytes4(msg.data[0:4]);
-            if (selector < bytes4(hex"00000004")) {
+            if (selector < 0x00000004) {
                 if (ERC1967Utils.getAdmin() != msg.sender) revert NotProxyAdmin(msg.sender);
-                if (selector < bytes4(hex"00000002")) {
-                    if (selector == bytes4(hex"00000000")) {
+                if (selector < 0x00000002) {
+                    if (selector == 0) {
                         _scheduleNewAdmin();
                     } else {
                         _changeAdmin();
                     }
                 } else {
-                    if (selector == bytes4(hex"00000002")) {
+                    if (selector == 0x00000002) {
                         _scheduleNewImplementation();
                     } else {
                         _changeImplementation();
                     }
                 }
             } else {
-                if (selector < bytes4(hex"00000006")) {
-                    if (selector == bytes4(hex"00000004")) {
+                if (selector < 0x00000006) {
+                    if (selector == 0x00000004) {
                         _getAdmin();
                     } else {
                         _getScheduledAdmin();
                     }
                 } else {
-                    if (selector == bytes4(hex"00000006")) {
+                    if (selector == 0x00000006) {
                         _getImplementation();
                     } else {
                         _getScheduledImplementation();
