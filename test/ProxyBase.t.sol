@@ -29,7 +29,7 @@ contract ProxyBaseTest is Test {
 
     function test_fuzz_calls(bytes4 selector) public {
         vm.assume(
-            selector > hex"00000004" && selector != Implementation.toggle.selector
+            selector > 0x00000003 && selector != Implementation.toggle.selector
                 && selector != Implementation.getFlag.selector
         );
 
@@ -39,20 +39,22 @@ contract ProxyBaseTest is Test {
     }
 
     function test_getAndChangeProxyAdmin() public {
-        (bool s, bytes memory returnData) = address(proxy).call(hex"00000003");
+        (bool s, bytes memory returnData) = address(proxy).call(hex"00000002");
         assertTrue(s, "Bad getAdmin call 1");
-        assertEq(address(bytes20(returnData)), address(this), "Wrong old proxy admin");
+        address admin = abi.decode(returnData, (address));
+        assertEq(admin, address(this), "Wrong old proxy admin");
 
-        bytes memory data = bytes.concat(hex"00000001", abi.encode(vm.addr(1)));
+        bytes memory data = bytes.concat(hex"00000000", abi.encode(vm.addr(1)));
         (s, returnData) = address(proxy).call(data);
         assertTrue(s, "Bad changeAdmin call 1");
         assertEq(returnData.length, 0, "Wrong returnData length");
 
-        (s, returnData) = address(proxy).call(hex"00000003");
+        (s, returnData) = address(proxy).call(hex"00000002");
         assertTrue(s, "Bad getAdmin call 2");
-        assertEq(address(bytes20(returnData)), vm.addr(1), "Wrong new proxy admin 1");
+        admin = abi.decode(returnData, (address));
+        assertEq(admin, vm.addr(1), "Wrong new proxy admin 1");
 
-        data = bytes.concat(hex"00000001", abi.encode(vm.addr(2)));
+        data = bytes.concat(hex"00000000", abi.encode(vm.addr(2)));
         (s, returnData) = address(proxy).call(data);
         assertFalse(s, "Bad changeAdmin call 2");
         assertEq(
@@ -60,34 +62,37 @@ contract ProxyBaseTest is Test {
         );
 
         vm.prank(vm.addr(1));
-        data = bytes.concat(hex"00000001", abi.encode(vm.addr(2)));
+        data = bytes.concat(hex"00000000", abi.encode(vm.addr(2)));
         (s, returnData) = address(proxy).call(data);
         assertTrue(s, "Bad changeAdmin call 3");
         assertEq(returnData.length, 0, "Wrong returnData length");
 
-        (s, returnData) = address(proxy).call(hex"00000003");
+        (s, returnData) = address(proxy).call(hex"00000002");
         assertTrue(s, "Bad getAdmin call 3");
-        assertEq(address(bytes20(returnData)), vm.addr(2), "Wrong new proxy admin 2");
+        admin = abi.decode(returnData, (address));
+        assertEq(admin, vm.addr(2), "Wrong new proxy admin 2");
     }
 
     function test_getAndChangeImplementation() public {
-        (bool s, bytes memory returnData) = address(proxy).call(hex"00000004");
+        (bool s, bytes memory returnData) = address(proxy).call(hex"00000003");
         assertTrue(s, "Bad getImplementation call 1");
-        assertEq(address(bytes20(returnData)), address(implementation), "Wrong old implementation");
+        address impl = abi.decode(returnData, (address));
+        assertEq(impl, address(implementation), "Wrong old implementation");
 
         vm.expectRevert();
         Implementation2(address(proxy)).getReverseFlag();
 
         address newImplementation = address(new Implementation2());
         bytes memory data =
-            bytes.concat(hex"00000002", abi.encode(newImplementation, abi.encodeCall(Implementation2.initialize, true)));
+            bytes.concat(hex"00000001", abi.encode(newImplementation, abi.encodeCall(Implementation2.initialize, true)));
         (s, returnData) = address(proxy).call(data);
         assertTrue(s, "Bad changeImplementation call");
         assertEq(returnData.length, 0, "Wrong returnData length");
 
-        (s, returnData) = address(proxy).call(hex"00000004");
+        (s, returnData) = address(proxy).call(hex"00000003");
         assertTrue(s, "Bad getImplementation call 2");
-        assertEq(address(bytes20(returnData)), newImplementation, "Wrong new implementation");
+        impl = abi.decode(returnData, (address));
+        assertEq(impl, newImplementation, "Wrong new implementation");
 
         assertFalse(Implementation2(address(proxy)).getReverseFlag(), "Wrong reverse flag");
     }
