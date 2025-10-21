@@ -207,10 +207,16 @@ contract ProxyBaseTimelock is ERC1967Proxy {
     function _getScheduledImplementation() internal pure {
         NewImplementation memory newImplementation = _getNewImplementationStruct();
         assembly ("memory-safe") {
-            let length := add(0x80, mload(add(newImplementation, 0x60)))
+            // 0xa0 = 5 * 32: struct offset, address slot, time slot, data offset, data length
+            let length := add(0xa0, mload(add(newImplementation, 0x60)))
+            let remainder := mod(length, 32)
+            if gt(remainder, 0) { length := add(length, sub(32, remainder)) }
+            // add struct offset
+            let structOffset := sub(newImplementation, 0x20)
+            mstore(structOffset, 0x20)
             // update newImplementation.data offset
             mstore(add(newImplementation, 0x40), 0x60)
-            return(newImplementation, length)
+            return(structOffset, length)
         }
     }
 
