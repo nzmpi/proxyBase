@@ -11,9 +11,9 @@ contract ProxyBaseTimelockMinimalTest is Test {
     bytes32 constant SCHEDULED_ADMIN_SLOT = 0xf4368cc27f089e2864e7549f41cfcd089cf3dac6a4a45da1e986635a00a9e100;
     bytes32 constant SCHEDULED_IMPLEMENTATION_SLOT = 0x65eefe6fc6d4243074c6129566699e1b26d56abc09f340bdbc9ceb10e6169b00;
     uint256 constant TIMELOCK = 24 hours;
-    bytes4 constant SCHEDULE_NEW_ADMIN_SELECTOR = 0;
+    bytes4 constant SCHEDULE_ADMIN_SELECTOR = 0;
     bytes constant CHANGE_ADMIN_SELECTOR = hex"00000001";
-    bytes4 constant SCHEDULE_NEW_IMPLEMENTATION_SELECTOR = 0x00000002;
+    bytes4 constant SCHEDULE_IMPLEMENTATION_SELECTOR = 0x00000002;
     bytes constant CHANGE_IMPLEMENTATION_SELECTOR = hex"00000003";
 
     Implementation implementation;
@@ -58,7 +58,7 @@ contract ProxyBaseTimelockMinimalTest is Test {
         expectedTime = vm.getBlockTimestamp() + TIMELOCK;
         vm.expectEmit(true, false, false, true);
         emit ProxyBaseTimelockMinimal.NewAdminScheduled(vm.addr(1), expectedTime);
-        bytes memory data = bytes.concat(SCHEDULE_NEW_ADMIN_SELECTOR, abi.encode(vm.addr(1)));
+        bytes memory data = bytes.concat(SCHEDULE_ADMIN_SELECTOR, abi.encode(vm.addr(1)));
         (bool s, bytes memory returnData) = address(proxy).call(data);
         assertTrue(s, "Bad scheduleNewAdmin call 1");
         assertEq(returnData.length, 0, "Wrong returnData length");
@@ -68,7 +68,7 @@ contract ProxyBaseTimelockMinimalTest is Test {
         assertEq(scheduledAdmin.time, expectedTime, "Wrong scheduled time 2");
 
         vm.startPrank(vm.addr(1));
-        data = bytes.concat(SCHEDULE_NEW_ADMIN_SELECTOR, abi.encode(vm.addr(2)));
+        data = bytes.concat(SCHEDULE_ADMIN_SELECTOR, abi.encode(vm.addr(2)));
         (s, returnData) = address(proxy).call(data);
         assertFalse(s, "Bad scheduleNewAdmin call 2");
         assertEq(
@@ -88,7 +88,7 @@ contract ProxyBaseTimelockMinimalTest is Test {
         );
 
         expectedTime = vm.getBlockTimestamp() + TIMELOCK;
-        bytes memory data = bytes.concat(SCHEDULE_NEW_ADMIN_SELECTOR, abi.encode(vm.addr(1)));
+        bytes memory data = bytes.concat(SCHEDULE_ADMIN_SELECTOR, abi.encode(vm.addr(1)));
         (s, returnData) = address(proxy).call(data);
         assertEq(_getAdmin(), address(this), "Wrong proxyAdmin 2");
 
@@ -120,7 +120,7 @@ contract ProxyBaseTimelockMinimalTest is Test {
         assertEq(scheduledAdmin.time, type(uint256).max, "Wrong scheduled time 1");
         assertEq(_getAdmin(), vm.addr(1), "Wrong proxyAdmin 3");
 
-        data = bytes.concat(SCHEDULE_NEW_ADMIN_SELECTOR, abi.encode(vm.addr(2)));
+        data = bytes.concat(SCHEDULE_ADMIN_SELECTOR, abi.encode(vm.addr(2)));
         (s, returnData) = address(proxy).call(data);
         assertFalse(s, "Bad scheduleNewAdmin call");
         assertEq(
@@ -131,7 +131,7 @@ contract ProxyBaseTimelockMinimalTest is Test {
 
         vm.startPrank(vm.addr(1));
         expectedTime = vm.getBlockTimestamp() + TIMELOCK;
-        data = bytes.concat(SCHEDULE_NEW_ADMIN_SELECTOR, abi.encode(vm.addr(2)));
+        data = bytes.concat(SCHEDULE_ADMIN_SELECTOR, abi.encode(vm.addr(2)));
         (s, returnData) = address(proxy).call(data);
         assertTrue(s, "Bad scheduleNewAdmin call");
         assertEq(returnData.length, 0, "Wrong returnData length");
@@ -154,7 +154,7 @@ contract ProxyBaseTimelockMinimalTest is Test {
         vm.expectEmit(true, false, false, true);
         emit ProxyBaseTimelockMinimal.NewImplementationScheduled(address(implementation3), initData, expectedTime);
         bytes memory data =
-            bytes.concat(SCHEDULE_NEW_IMPLEMENTATION_SELECTOR, abi.encode(address(implementation3), initData));
+            bytes.concat(SCHEDULE_IMPLEMENTATION_SELECTOR, abi.encode(address(implementation3), initData));
         (bool s, bytes memory returnData) = address(proxy).call(data);
         assertTrue(s, "Bad scheduleNewImplementation call 1");
         assertEq(returnData.length, 0, "Wrong returnData length");
@@ -189,7 +189,7 @@ contract ProxyBaseTimelockMinimalTest is Test {
         bytes memory initData = abi.encodeCall(Implementation3.initialize, ("some very long long long long long data"));
         expectedTime = vm.getBlockTimestamp() + TIMELOCK;
         bytes memory data =
-            bytes.concat(SCHEDULE_NEW_IMPLEMENTATION_SELECTOR, abi.encode(address(implementation3), initData));
+            bytes.concat(SCHEDULE_IMPLEMENTATION_SELECTOR, abi.encode(address(implementation3), initData));
         (s, returnData) = address(proxy).call(data);
         assertEq(_getImplementation(), address(implementation), "Wrong implementation 2");
 

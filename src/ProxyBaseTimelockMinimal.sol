@@ -55,7 +55,7 @@ contract ProxyBaseTimelockMinimal is ERC1967Proxy {
      * Proxy fallback function
      * @dev Selectors 0x00000000 - 0x00000003 are reserved for proxy functions
      * and can only be called by the proxy admin.
-     * @dev 0x00000000: scheduleNewAdmin(address newAdmin) - where new admin is abi encoded.
+     * @dev 0x00000000: scheduleAdmin(address newAdmin) - where new admin is abi encoded.
      * @dev 0x00000001: changeAdmin() - updates the admin to the scheduled one.
      * @dev 0x00000002: scheduleImplementation(address newImplementation, bytes data) -
      * where newImplementation and data are abi encoded.
