@@ -138,7 +138,7 @@ contract ProxyBaseTimelock is ERC1967Proxy {
      * Schedule a new implementation
      */
     function _scheduleImplementation() internal {
-        (address implementation, bytes memory data) = abi.decode(msg.data[4:msg.data.length], (address, bytes));
+        (address implementation, bytes memory data) = abi.decode(msg.data[4:], (address, bytes));
         ScheduledImplementation storage scheduledImplementation = _getScheduledImplementationStruct();
         scheduledImplementation.implementation = implementation;
         scheduledImplementation.data = data;
