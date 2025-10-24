@@ -4,12 +4,12 @@ pragma solidity ^0.8.26;
 import {ERC1967Proxy, ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /**
- * @title ProxyBaseTimelock
- * @notice A simple proxy contract with a timelock.
+ * @title ProxyBaseTimelockMinimal
+ * @notice A simple minimal proxy contract with a timelock.
  * @dev This proxy doesn't have any public functions.
  * @author https://github.com/nzmpi
  */
-contract ProxyBaseTimelock is ERC1967Proxy {
+contract ProxyBaseTimelockMinimal is ERC1967Proxy {
     // EIP-7201: keccak256(abi.encode(uint256(keccak256("proxyBaseTimelock.storage.scheduledAdmin")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant SCHEDULED_ADMIN_SLOT = 0xf4368cc27f089e2864e7549f41cfcd089cf3dac6a4a45da1e986635a00a9e100;
     // EIP-7201: keccak256(abi.encode(uint256(keccak256("proxyBaseTimelock.storage.scheduledImplementation")) - 1)) & ~bytes32(uint256(0xff))
@@ -53,51 +53,34 @@ contract ProxyBaseTimelock is ERC1967Proxy {
 
     /**
      * Proxy fallback function
-     * @dev Selectors 0x00000000 - 0x00000007 are reserved for proxy functions.
-     * @dev Selectors 0x00000000-0x00000003 can only be called by the proxy admin.
+     * @dev Selectors 0x00000000 - 0x00000003 are reserved for proxy functions
+     * and can only be called by the proxy admin.
      * @dev 0x00000000: scheduleAdmin(address newAdmin) - where new admin is abi encoded.
      * @dev 0x00000001: changeAdmin() - updates the admin to the scheduled one.
      * @dev 0x00000002: scheduleImplementation(address newImplementation, bytes data) -
      * where newImplementation and data are abi encoded.
      * @dev 0x00000003: changeImplementation() - updates the implementation to the scheduled one.
-     * @dev 0x00000004: getAdmin() - returns the proxy admin address.
-     * @dev 0x00000005: getScheduledAdmin() - returns the ScheduledAdmin struct.
-     * @dev 0x00000006: getImplementation() - returns the implementation address.
-     * @dev 0x00000007: getScheduledImplementation() - returns the ScheduledImplementation struct.
      * @dev All other selectors are forwarded to the implementation.
-     * @dev Examples of calls can be found in test/ProxyBaseTimeLock.t.sol
+     * @dev To get the admin/implementation address or scheduled structs
+     * read it directly from the storage,
+     * e.g. https://docs.ethers.org/v6/api/providers/#Provider-getStorage
+     * @dev Examples of calls can be found in test/ProxyBaseTimeLockMinimal.t.sol
      */
     fallback() external payable override {
-        if (bytes4(msg.data[0:4]) < 0x00000008) {
+        if (bytes4(msg.data[0:4]) < 0x00000004) {
+            if (ERC1967Utils.getAdmin() != msg.sender) revert NotProxyAdmin(msg.sender);
             bytes4 selector = bytes4(msg.data[0:4]);
-            if (selector < 0x00000004) {
-                if (ERC1967Utils.getAdmin() != msg.sender) revert NotProxyAdmin(msg.sender);
-                if (selector < 0x00000002) {
-                    if (selector == 0) {
-                        _scheduleAdmin();
-                    } else {
-                        _changeAdmin();
-                    }
+            if (selector < 0x00000002) {
+                if (selector == 0) {
+                    _scheduleAdmin();
                 } else {
-                    if (selector == 0x00000002) {
-                        _scheduleImplementation();
-                    } else {
-                        _changeImplementation();
-                    }
+                    _changeAdmin();
                 }
             } else {
-                if (selector < 0x00000006) {
-                    if (selector == 0x00000004) {
-                        _getAdmin();
-                    } else {
-                        _getScheduledAdmin();
-                    }
+                if (selector == 0x00000002) {
+                    _scheduleImplementation();
                 } else {
-                    if (selector == 0x00000006) {
-                        _getImplementation();
-                    } else {
-                        _getScheduledImplementation();
-                    }
+                    _changeImplementation();
                 }
             }
         } else {
@@ -164,60 +147,6 @@ contract ProxyBaseTimelock is ERC1967Proxy {
         scheduledImplementation.time = type(uint256).max;
 
         ERC1967Utils.upgradeToAndCall(implementation, data);
-    }
-
-    /**
-     * Get the admin address
-     */
-    function _getAdmin() internal view {
-        address admin = ERC1967Utils.getAdmin();
-        assembly ("memory-safe") {
-            mstore(0, admin)
-            return(0, 32)
-        }
-    }
-
-    /**
-     * Get the ScheduledAdmin struct
-     */
-    function _getScheduledAdmin() internal view {
-        assembly ("memory-safe") {
-            let admin := sload(SCHEDULED_ADMIN_SLOT)
-            let time := sload(add(SCHEDULED_ADMIN_SLOT, 1))
-            mstore(0x20, time)
-            mstore(0, admin)
-            return(0, 64)
-        }
-    }
-
-    /**
-     * Get the implementation address
-     */
-    function _getImplementation() internal view {
-        address implementation = ERC1967Utils.getImplementation();
-        assembly ("memory-safe") {
-            mstore(0, implementation)
-            return(0, 32)
-        }
-    }
-
-    /**
-     * Get the ScheduledImplementation struct
-     */
-    function _getScheduledImplementation() internal pure {
-        ScheduledImplementation memory scheduledImplementation = _getScheduledImplementationStruct();
-        assembly ("memory-safe") {
-            // 0xa0 = 5 * 32: struct offset, address slot, time slot, data offset, data length
-            let length := add(0xa0, mload(add(scheduledImplementation, 0x60)))
-            let remainder := mod(length, 32)
-            if gt(remainder, 0) { length := add(length, sub(32, remainder)) }
-            // add struct offset
-            let structOffset := sub(scheduledImplementation, 0x20)
-            mstore(structOffset, 0x20)
-            // update scheduledImplementation.data offset
-            mstore(add(scheduledImplementation, 0x40), 0x60)
-            return(structOffset, length)
-        }
     }
 
     /**
