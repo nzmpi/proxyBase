@@ -28,7 +28,7 @@ The contract has 8 reserved selectors:
 
 # Proxy Base Minimal
 
-The same contract, but without `view` functions.
+The same contracts, but without `view` functions.
 
 To get the admin/implementation address or scheduled structs read it directly from the storage,
 e.g. https://docs.ethers.org/v6/api/providers/#Provider-getStorage
